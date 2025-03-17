@@ -877,6 +877,7 @@ def v1_chat_generate_request(
     modalities_list = []
     lora_paths = []
 
+    should_log_prompt_text = tokenizer_manager.server_args.log_requests and tokenizer_manager.server_args.log_requests_level == 2
     # NOTE: with openai API, the prompt's logprobs are always not computed
 
     for request in all_requests:
@@ -926,6 +927,13 @@ def v1_chat_generate_request(
                         add_generation_prompt=True,
                         tools=tools,
                     )
+                    if should_log_prompt_text:
+                        prompt_text = tokenizer_manager.tokenizer.apply_chat_template(
+                            openai_compatible_messages,
+                            tokenize=False,
+                            add_generation_prompt=True,
+                            tools=tools,
+                        )
                 except:
                     #  This except branch will be triggered when the chosen model
                     #  has a different tools input format that is not compatiable
@@ -937,6 +945,13 @@ def v1_chat_generate_request(
                         add_generation_prompt=True,
                         tools=tools,
                     )
+                    if should_log_prompt_text:
+                        prompt_text = tokenizer_manager.tokenizer.apply_chat_template(
+                            openai_compatible_messages,
+                            tokenize=False,
+                            add_generation_prompt=True,
+                            tools=tools,
+                        )
 
                 if assistant_prefix:
                     encoded = tokenizer_manager.tokenizer.encode(assistant_prefix)
@@ -946,6 +961,12 @@ def v1_chat_generate_request(
                     ):
                         encoded = encoded[1:]
                     prompt_ids += encoded
+
+                    if should_log_prompt_text:
+                        prompt_text += assistant_prefix
+
+                if should_log_prompt_text:
+                    logger.info("prompt_text: " + prompt_text)
                 stop = request.stop
                 image_data = None
                 modalities = []
@@ -961,6 +982,9 @@ def v1_chat_generate_request(
                     else:
                         stop.extend(request.stop)
                 prompt_ids = tokenizer_manager.tokenizer.encode(prompt)
+
+                if should_log_prompt_text:
+                    logger.info("prompt_text: " + prompt)
         else:
             # Use the raw prompt and stop strings if the messages is already a string.
             prompt_ids = request.messages
